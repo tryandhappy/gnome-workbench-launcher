@@ -162,7 +162,29 @@ Host sample-db
 ./uninstall.sh
 ```
 
-拡張本体はゴミ箱へ移動します。ワークベンチの設定ファイルは消さずに残します。
+拡張機能を無効化し、拡張本体を`~/.local/share/Trash/files/`へ移動し、`~/.local/bin/workbench-launcher`を削除します。ワークベンチの設定ファイルは消さずに残します。
+
+### ショートカットの削除
+
+`create-shortcut.sh`で作成した`.desktop`ファイルは自動では削除されません。作成した場所に応じて手で削除してください。`<id>`はワークベンチのIDです。
+
+```bash
+rm "$(xdg-user-dir DESKTOP)/workbench-launcher-<id>.desktop"       # デスクトップ
+rm ~/.local/share/applications/workbench-launcher-<id>.desktop       # アプリ一覧
+rm ~/.config/autostart/workbench-launcher-<id>.desktop               # 自動起動
+```
+
+特に自動起動用のファイルを残すと、ログインごとにコマンドラインツールが拡張機能への接続を60秒間試み続けます。忘れずに削除してください。
+
+### 設定ファイルの削除
+
+設定も含めて完全に消す場合は、次を実行します。
+
+```bash
+rm -r ~/.config/workbench-launcher
+```
+
+Shellが読み込み済みの拡張コードはログアウトまでメモリに残ります。パネルアイコンは無効化の時点で消えますが、完全に片付けるには一度再ログインしてください。
 
 ## 実装の仕組み
 
