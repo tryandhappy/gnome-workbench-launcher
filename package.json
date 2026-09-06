@@ -1,0 +1,15 @@
+{
+  "name": "gnome-workbench-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:runtime": "node --check extension.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@girs/gjs": "latest",
+    "@girs/gnome-shell": "latest",
+    "typescript": "latest"
+  }
+}

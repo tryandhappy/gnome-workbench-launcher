@@ -1,0 +1,79 @@
+{
+  "workbenches": [
+    {
+      "id": "sample",
+      "name": "サンプルワークベンチ",
+      "workspace": 2,
+      "apps": [
+        {
+          "id": "browser",
+          "command": [
+            "firefox",
+            "--new-window",
+            "https://example.com/",
+            "https://example.net/"
+          ],
+          "match": {
+            "wmClass": "firefox"
+          },
+          "monitor": 0,
+          "rect": { "x": 0.0, "y": 0.0, "width": 0.6, "height": 1.0 }
+        },
+        {
+          "id": "web-terminal",
+          "command": [
+            "ghostty",
+            "--class=org.example.sample.web",
+            "--title=sample:web",
+            "-e",
+            "ssh",
+            "sample-web"
+          ],
+          "match": {
+            "appId": "org.example.sample.web",
+            "titleContains": "sample:web"
+          },
+          "reuseExisting": true,
+          "monitor": 0,
+          "rect": { "x": 0.6, "y": 0.0, "width": 0.4, "height": 0.333 }
+        },
+        {
+          "id": "app-terminal",
+          "command": [
+            "ghostty",
+            "--class=org.example.sample.app",
+            "--title=sample:app",
+            "-e",
+            "ssh",
+            "sample-app"
+          ],
+          "match": {
+            "appId": "org.example.sample.app",
+            "titleContains": "sample:app"
+          },
+          "reuseExisting": true,
+          "monitor": 0,
+          "rect": { "x": 0.6, "y": 0.333, "width": 0.4, "height": 0.334 }
+        },
+        {
+          "id": "db-terminal",
+          "command": [
+            "ghostty",
+            "--class=org.example.sample.db",
+            "--title=sample:db",
+            "-e",
+            "ssh",
+            "sample-db"
+          ],
+          "match": {
+            "appId": "org.example.sample.db",
+            "titleContains": "sample:db"
+          },
+          "reuseExisting": true,
+          "monitor": 0,
+          "rect": { "x": 0.6, "y": 0.667, "width": 0.4, "height": 0.333 }
+        }
+      ]
+    }
+  ]
+}

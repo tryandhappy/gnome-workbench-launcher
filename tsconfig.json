@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "target": "ES2023",
+    "lib": ["ES2023"]
+  },
+  "files": [
+    "types/ambient.d.ts",
+    "src/extension.ts"
+  ]
+}

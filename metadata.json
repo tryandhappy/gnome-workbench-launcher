@@ -1,0 +1,7 @@
+{
+  "uuid": "workbench-launcher@tryandhappy",
+  "name": "Workbench Launcher",
+  "description": "Launch workbench-specific applications and arrange their windows on GNOME 50.",
+  "shell-version": ["50"],
+  "version": 1
+}
