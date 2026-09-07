@@ -15,6 +15,10 @@ Ubuntu 26.04標準のGNOME 50＋Mutter＋Wayland上で、作業に必要なア�
 
 Firefoxを画面左60%、3つのGhosttyを画面右側へ縦に並べ、仮想ワークスペース2へ移動します。
 
+もう1つの「配置なしサンプル」（ID `sample-plain`）は、`rect`を省略した例です。テキストエディタとファイル（Nautilus）を仮想ワークスペース3へ移動するだけで、ウィンドウの位置とサイズはアプリ任せにします。Nautilusは`width`と`height`を省略して位置だけを指定しています。
+
+サンプル設定は初回の`install.sh`でのみ`~/.config/workbench-launcher/workbenches.json`へコピーされます。既に設定ファイルがある場合は、`workbenches.example.json`から必要な部分を手で写してください。
+
 ## インストール
 
 展開したディレクトリで実行します。

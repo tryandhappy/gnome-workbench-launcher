@@ -74,6 +74,30 @@
           "rect": { "x": 0.6, "y": 0.667, "width": 0.4, "height": 0.333 }
         }
       ]
+    },
+    {
+      "id": "sample-plain",
+      "name": "配置なしサンプル",
+      "workspace": 3,
+      "apps": [
+        {
+          "id": "editor",
+          "command": ["gnome-text-editor", "--new-window"],
+          "match": {
+            "appId": "org.gnome.TextEditor"
+          },
+          "monitor": 0
+        },
+        {
+          "id": "files",
+          "command": ["nautilus", "--new-window"],
+          "match": {
+            "appId": "org.gnome.Nautilus"
+          },
+          "monitor": 0,
+          "rect": { "x": 0.5, "y": 0.0 }
+        }
+      ]
     }
   ]
 }
