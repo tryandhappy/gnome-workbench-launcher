@@ -31,5 +31,14 @@ GNOME Shell 50（Ubuntu 26.04、Wayland）向けの拡張機能。「ワーク�
 - UUID を変更した場合は、旧 UUID のディレクトリが `~/.local/share/gnome-shell/extensions/` に残るので手で撤去する。
 - Shell 側のログは `journalctl --user -b --no-pager | grep -i 'Workbench Launcher'` で確認する。
 - 設定の変更だけならパネルメニューの「設定を再読み込み」で反映できる。
-- 新しいファイルを追加したら `Makefile` の `check`（bash -n）と `package`（zip 対象）に加える。
+- 新しいファイルを追加したら `Makefile` の `check`（bash -n）と `package`（zip 対象）に加える。`dev/` は開発専用で `package` には含めない。
 - 個人の環境に依存する値（ドメイン、ホスト名、URL、アプリID）はリポジトリに入れず、`example` 系のプレースホルダを使う。
+
+## 入れ子 Shell での動作確認（開発専用）
+
+- `dev/nested-test.sh <workbenches.json> <workbench-id>` で、再ログインせずに作業ツリーの `extension.js` を入れ子の GNOME Shell（`gnome-shell --devkit`、仮想モニター 1600x900）に読み込み、ワークベンチを起動してウィンドウの位置・ワークスペースとイベント履歴を JSON で出す。`dev/inspect@workbench-launcher.dev/` はそのための検査用拡張。
+- これは開発者向けの手段で、README には載せない（利用者向けには案内しない方針）。
+- GNOME 50 では `--nested` と `--unsafe-mode` が無くなっている。入れ子起動は `--devkit`（ヘッドレス＋仮想モニター。表示用の `mutter-devkit` は Ubuntu に無いが動作確認には不要）。`Eval` / `Introspect` / `Screenshot` の D-Bus は使えないので、検査用拡張で状態を取り出す。
+- 入れ子 Shell は必ず `GSETTINGS_BACKEND=memory` と一時ディレクトリの `XDG_CONFIG_HOME` / `XDG_DATA_HOME` を **dbus-run-session の内側で** 設定して動かす。外側で設定したり実 dconf を共有すると、入れ子 Shell の `enabled-extensions` 書き込みが実セッションの dconf に入り、実セッションの拡張がまとめて無効化される（2026-09-07 に発生し手で復旧した）。
+- 動的ワークスペースの都合で、入れ子 Shell では空のワークスペースが即座に消えて番号が詰まる。ワークベンチのウィンドウが同じワークスペースにまとまっていれば正常。
+- 位置だけ指定したウィンドウは、Mutter の画面内制約で座標が補正される（幅の広いウィンドウを x: 0.5 に置くと左へ寄る）。これは仕様。

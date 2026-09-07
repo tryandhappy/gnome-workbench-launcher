@@ -7,7 +7,9 @@ check:
 	node --check extension.js
 	python3 -m json.tool metadata.json >/dev/null
 	python3 -m json.tool workbenches.example.json >/dev/null
-	bash -n install.sh uninstall.sh create-shortcut.sh bin/workbench-launcher
+	bash -n install.sh uninstall.sh create-shortcut.sh bin/workbench-launcher dev/nested-test.sh
+	node --check dev/inspect@workbench-launcher.dev/extension.js
+	python3 -m json.tool dev/inspect@workbench-launcher.dev/metadata.json >/dev/null
 
 install: check
 	./install.sh

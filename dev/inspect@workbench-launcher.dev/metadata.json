@@ -1,0 +1,6 @@
+{
+  "uuid": "inspect@workbench-launcher.dev",
+  "name": "Workbench Launcher Inspect (dev)",
+  "description": "開発用。入れ子の GNOME Shell でウィンドウとワークスペースの状態を D-Bus から取り出す。",
+  "shell-version": ["50"]
+}
