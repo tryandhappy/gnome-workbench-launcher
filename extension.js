@@ -35,6 +35,7 @@ const DBUS_INTERFACE_XML = `
     </method>
     <method name="CycleWorkbench">
       <arg type="b" direction="in" name="only"/>
+      <arg type="b" direction="in" name="backward"/>
       <arg type="s" direction="out" name="id"/>
     </method>
     <method name="Reload"/>
@@ -58,8 +59,8 @@ class WorkbenchLauncherService {
         return this._extension.raiseWorkbenchById(id, only);
     }
 
-    CycleWorkbench(only) {
-        return this._extension.cycleWorkbench(only);
+    CycleWorkbench(only, backward) {
+        return this._extension.cycleWorkbench(only, backward);
     }
 
     Reload() {
@@ -157,8 +158,8 @@ export default class WorkbenchLauncherExtension extends Extension {
         return this._raiseWorkbench(this._workbenchById(id), only);
     }
 
-    cycleWorkbench(only) {
-        return this._cycleWorkbench(only);
+    cycleWorkbench(only, backward) {
+        return this._cycleWorkbench(only, backward);
     }
 
     _workbenchById(id) {
@@ -405,9 +406,9 @@ export default class WorkbenchLauncherExtension extends Extension {
         return true;
     }
 
-    // フォーカス中のウィンドウが属するワークベンチの「次」を前面に出す。
+    // フォーカス中のウィンドウが属するワークベンチの「次」（backward なら「前」）を前面に出す。
     // 対象は現在ウィンドウを持つワークベンチだけで、設定ファイルの並び順で巡回する。
-    _cycleWorkbench(only) {
+    _cycleWorkbench(only, backward = false) {
         const running = this._workbenches.filter(
             workbench => this._workbenchWindowGroups(workbench).length > 0
         );
@@ -422,7 +423,10 @@ export default class WorkbenchLauncherExtension extends Extension {
             ? running.findIndex(workbench =>
                 workbench.apps.some(app => this._windowMatches(focus, app.match)))
             : -1;
-        const next = running[(currentIndex + 1) % running.length];
+        const step = backward ? -1 : 1;
+        // フォーカスがどのワークベンチにも属さないときは、次なら先頭、前なら末尾へ。
+        const base = currentIndex < 0 ? (backward ? 0 : -1) : currentIndex;
+        const next = running[(base + step + running.length) % running.length];
         this._raiseWorkbench(next, only);
         return next.id;
     }

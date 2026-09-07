@@ -75,7 +75,8 @@ workbench-launcher launch sample    # ワークベンチを起動
 workbench-launcher launch sample --wait 60   # 拡張機能が有効になるまで最長60秒待って起動
 workbench-launcher raise sample     # ワークベンチのウィンドウを前面に出す（未起動なら起動）
 workbench-launcher raise sample --only   # 前面に出し、同じワークスペースの他のウィンドウは最小化
-workbench-launcher cycle            # 起動中のワークベンチを設定の並び順で切り替える
+workbench-launcher cycle            # 起動中のワークベンチを設定の並び順で次へ切り替える
+workbench-launcher cycle prev       # 前へ切り替える
 workbench-launcher cycle --only     # 切り替え先以外のウィンドウは最小化
 workbench-launcher reload           # 設定を再読み込み
 ```
@@ -87,11 +88,26 @@ GNOMEの「設定 → キーボード → カスタムショートカット」�
 起動済みのワークベンチは、ウィンドウの組としてまとめて前面に出したり、組ごとに切り替えたりできます。ウィンドウは各アプリの`match`で見つけるので、この拡張以外から起動したウィンドウも一致すれば対象になります。
 
 - `raise <id>`は、そのワークベンチに属するウィンドウをまとめて前面に出します。ウィンドウが複数のワークスペースに散っている場合は最も多いワークスペースを表示します。ウィンドウが1つも無ければ通常の起動と同じ動きをします。設定で先頭のアプリにフォーカスが移ります。
-- `cycle`は、今フォーカスしているウィンドウが属するワークベンチの「次」を前面に出します。対象はウィンドウを持つワークベンチだけで、設定ファイルの並び順で巡回します。起動していないワークベンチを勝手に起動することはありません。
+- `cycle`（または`cycle next`）は、今フォーカスしているウィンドウが属するワークベンチの「次」を、`cycle prev`は「前」を前面に出します。対象はウィンドウを持つワークベンチだけで、設定ファイルの並び順で巡回します。起動していないワークベンチを勝手に起動することはありません。
 - `--only`を付けると、表示先のワークスペースにある他の通常ウィンドウを最小化して、そのワークベンチのウィンドウだけを見せます。最小化したウィンドウは、別のワークベンチへ`raise`や`cycle`したときに元に戻ります。
 - パネルメニューの「前面に出す」からも同じ操作ができます。
 
-`cycle`をカスタムショートカットに割り当てると、1つのキーで作業の組を順番に切り替えられます。
+`cycle next`と`cycle prev`をカスタムショートカットに割り当てると、キーで作業の組を前後に切り替えられます。GNOMEの「設定 → キーボード → カスタムショートカット」で登録するほか、次のように`gsettings`でも登録できます（例はCtrl+Shift+右/左）。
+
+```bash
+base=org.gnome.settings-daemon.plugins.media-keys
+path=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+gsettings set $base.custom-keybinding:$path/workbench-next/ name 'Workbench: next'
+gsettings set $base.custom-keybinding:$path/workbench-next/ command "$HOME/.local/bin/workbench-launcher cycle next"
+gsettings set $base.custom-keybinding:$path/workbench-next/ binding '<Control><Shift>Right'
+gsettings set $base.custom-keybinding:$path/workbench-prev/ name 'Workbench: prev'
+gsettings set $base.custom-keybinding:$path/workbench-prev/ command "$HOME/.local/bin/workbench-launcher cycle prev"
+gsettings set $base.custom-keybinding:$path/workbench-prev/ binding '<Control><Shift>Left'
+# 既存の一覧に2つのパスを追加する（一覧の上書きに注意）
+gsettings get $base custom-keybindings
+```
+
+Ctrl+Shift+左右はテキスト編集の単語選択と重なるので、常用するなら別のキーを選んでください。
 
 ### D-Busインターフェース
 
@@ -103,7 +119,7 @@ GNOMEの「設定 → キーボード → カスタムショートカット」�
 インターフェース: org.gnome.Shell.Extensions.WorkbenchLauncher
 メソッド:      LaunchWorkbench(s id)
                RaiseWorkbench(s id, b only) -> b raised
-               CycleWorkbench(b only) -> s id
+               CycleWorkbench(b only, b backward) -> s id
                ListWorkbenches() -> as
                Reload()
 ```

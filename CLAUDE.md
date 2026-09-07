@@ -16,10 +16,10 @@ GNOME Shell 50（Ubuntu 26.04、Wayland）向けの拡張機能。「ワーク�
 
 - `enable()` はパネルアイコンの追加と `window-created` の監視開始、設定の読み込みだけを行う。アプリは起動しない。
 - アプリの起動はパネルメニュー、または D-Bus の `LaunchWorkbench(id)` から `_launchWorkbench` を呼んだとき。ショートカット・自動起動・CLI・キーボードショートカットはすべて D-Bus 経由。
-- D-Bus は `org.gnome.Shell` 宛て、パス `/org/gnome/Shell/Extensions/WorkbenchLauncher`、インターフェース `org.gnome.Shell.Extensions.WorkbenchLauncher`。メソッドは `LaunchWorkbench(s)` / `RaiseWorkbench(s, b) -> b` / `CycleWorkbench(b) -> s` / `ListWorkbenches() -> as` / `Reload()`。`enable()` で export、`disable()` で unexport する。
+- D-Bus は `org.gnome.Shell` 宛て、パス `/org/gnome/Shell/Extensions/WorkbenchLauncher`、インターフェース `org.gnome.Shell.Extensions.WorkbenchLauncher`。メソッドは `LaunchWorkbench(s)` / `RaiseWorkbench(s, b) -> b` / `CycleWorkbench(b, b) -> s` / `ListWorkbenches() -> as` / `Reload()`。`enable()` で export、`disable()` で unexport する。
 - 起動後は `window-created` で新規ウィンドウを appId / wmClass / titleContains で照合し、`Meta.Window` で配置。アプリ側の初期サイズ上書きに備えて 350ms / 1000ms 後に再適用する。
 - `reuseExisting: true` のアプリは、既に一致するウィンドウがあれば再起動せず再配置する。
-- `_raiseWorkbench` は `match` で見つけた既存ウィンドウを前面に出す（無ければ起動に回す）。`only` で同じワークスペースの他ウィンドウを最小化。`_cycleWorkbench` はウィンドウを持つワークベンチだけを設定順で巡回し、フォーカス中ウィンドウの所属から「次」を決める。CLI は `raise` / `cycle`。
+- `_raiseWorkbench` は `match` で見つけた既存ウィンドウを前面に出す（無ければ起動に回す）。`only` で同じワークスペースの他ウィンドウを最小化。`_cycleWorkbench` はウィンドウを持つワークベンチだけを設定順で巡回し、フォーカス中ウィンドウの所属から「次」を決める。CLI は `raise` / `cycle [next|prev]`。
 
 ## インストールと有効化の注意
 

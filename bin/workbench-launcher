@@ -3,14 +3,14 @@
 #
 #   workbench-launcher launch <workbench-id> [--wait SECONDS]
 #   workbench-launcher raise <workbench-id> [--only]
-#   workbench-launcher cycle [--only]
+#   workbench-launcher cycle [next|prev] [--only]
 #   workbench-launcher list
 #   workbench-launcher reload
 #
 # 拡張機能が公開する D-Bus インターフェースを呼び出す。--wait を付けると、
 # ログイン直後などで拡張機能がまだ有効になっていない場合に、指定秒数まで再試行する。
 # raise はワークベンチのウィンドウを前面に出す（起動していなければ起動する）。
-# cycle は起動中のワークベンチを設定の並び順で切り替える。--only は他のウィンドウを最小化する。
+# cycle は起動中のワークベンチを設定の並び順で切り替える（既定は next）。--only は他のウィンドウを最小化する。
 set -euo pipefail
 
 dest='org.gnome.Shell'
@@ -45,8 +45,16 @@ case "$1" in
         ;;
     cycle)
         only=false
-        [[ "${2:-}" == "--only" ]] && only=true
-        call CycleWorkbench "$only" | sed -e "s/^('//" -e "s/',)$//"
+        backward=false
+        for arg in "${@:2}"; do
+            case "$arg" in
+                next) backward=false ;;
+                prev|back) backward=true ;;
+                --only) only=true ;;
+                *) usage 1 ;;
+            esac
+        done
+        call CycleWorkbench "$only" "$backward" | sed -e "s/^('//" -e "s/',)$//"
         ;;
     launch)
         [[ $# -ge 2 ]] || usage 1
