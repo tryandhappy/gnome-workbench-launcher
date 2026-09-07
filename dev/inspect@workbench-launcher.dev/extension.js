@@ -68,6 +68,7 @@ export default class InspectExtension extends Extension {
         return JSON.stringify({
             pending: launcher?._pending?.map(entry => entry.rule.id) ?? 'n/a',
             activeWorkspace: manager.get_active_workspace_index() + 1,
+            focusWindow: global.display.focus_window?.get_wm_class() ?? null,
             workspaces: manager.get_n_workspaces(),
             windows: global.get_window_actors().map(actor => {
                 const w = actor.meta_window;
@@ -76,6 +77,7 @@ export default class InspectExtension extends Extension {
                     wmClass: w.get_wm_class(), appId: w.get_gtk_application_id(), title: w.get_title(),
                     workspace: this._wsIndex(w), monitor: w.get_monitor(),
                     x: r.x, y: r.y, width: r.width, height: r.height, maximized: w.is_maximized(),
+                    minimized: w.minimized, focused: w.has_focus(),
                 };
             }),
             events: this._events,

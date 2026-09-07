@@ -73,10 +73,25 @@ journalctl --user -b --no-pager | grep -i 'Workbench Launcher'
 workbench-launcher list             # 設定済みのワークベンチIDを表示
 workbench-launcher launch sample    # ワークベンチを起動
 workbench-launcher launch sample --wait 60   # 拡張機能が有効になるまで最長60秒待って起動
+workbench-launcher raise sample     # ワークベンチのウィンドウを前面に出す（未起動なら起動）
+workbench-launcher raise sample --only   # 前面に出し、同じワークスペースの他のウィンドウは最小化
+workbench-launcher cycle            # 起動中のワークベンチを設定の並び順で切り替える
+workbench-launcher cycle --only     # 切り替え先以外のウィンドウは最小化
 workbench-launcher reload           # 設定を再読み込み
 ```
 
 GNOMEの「設定 → キーボード → カスタムショートカット」で`workbench-launcher launch sample`をコマンドとして登録すると、キーボードから起動できます。`~/.local/bin`が`PATH`に無い環境では、フルパスで指定してください。
+
+### ワークベンチの前面表示と切り替え
+
+起動済みのワークベンチは、ウィンドウの組としてまとめて前面に出したり、組ごとに切り替えたりできます。ウィンドウは各アプリの`match`で見つけるので、この拡張以外から起動したウィンドウも一致すれば対象になります。
+
+- `raise <id>`は、そのワークベンチに属するウィンドウをまとめて前面に出します。ウィンドウが複数のワークスペースに散っている場合は最も多いワークスペースを表示します。ウィンドウが1つも無ければ通常の起動と同じ動きをします。設定で先頭のアプリにフォーカスが移ります。
+- `cycle`は、今フォーカスしているウィンドウが属するワークベンチの「次」を前面に出します。対象はウィンドウを持つワークベンチだけで、設定ファイルの並び順で巡回します。起動していないワークベンチを勝手に起動することはありません。
+- `--only`を付けると、表示先のワークスペースにある他の通常ウィンドウを最小化して、そのワークベンチのウィンドウだけを見せます。最小化したウィンドウは、別のワークベンチへ`raise`や`cycle`したときに元に戻ります。
+- パネルメニューの「前面に出す」からも同じ操作ができます。
+
+`cycle`をカスタムショートカットに割り当てると、1つのキーで作業の組を順番に切り替えられます。
 
 ### D-Busインターフェース
 
@@ -86,7 +101,11 @@ GNOMEの「設定 → キーボード → カスタムショートカット」�
 宛先:          org.gnome.Shell
 オブジェクト:  /org/gnome/Shell/Extensions/WorkbenchLauncher
 インターフェース: org.gnome.Shell.Extensions.WorkbenchLauncher
-メソッド:      LaunchWorkbench(s id) / ListWorkbenches() -> as / Reload()
+メソッド:      LaunchWorkbench(s id)
+               RaiseWorkbench(s id, b only) -> b raised
+               CycleWorkbench(b only) -> s id
+               ListWorkbenches() -> as
+               Reload()
 ```
 
 ```bash

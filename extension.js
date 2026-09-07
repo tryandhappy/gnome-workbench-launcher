@@ -28,6 +28,15 @@ const DBUS_INTERFACE_XML = `
     <method name="ListWorkbenches">
       <arg type="as" direction="out" name="ids"/>
     </method>
+    <method name="RaiseWorkbench">
+      <arg type="s" direction="in" name="id"/>
+      <arg type="b" direction="in" name="only"/>
+      <arg type="b" direction="out" name="raised"/>
+    </method>
+    <method name="CycleWorkbench">
+      <arg type="b" direction="in" name="only"/>
+      <arg type="s" direction="out" name="id"/>
+    </method>
     <method name="Reload"/>
   </interface>
 </node>`;
@@ -45,6 +54,14 @@ class WorkbenchLauncherService {
         return this._extension.workbenchIds;
     }
 
+    RaiseWorkbench(id, only) {
+        return this._extension.raiseWorkbenchById(id, only);
+    }
+
+    CycleWorkbench(only) {
+        return this._extension.cycleWorkbench(only);
+    }
+
     Reload() {
         this._extension.reload();
     }
@@ -52,7 +69,7 @@ class WorkbenchLauncherService {
 
 const WorkbenchIndicator = GObject.registerClass(
 class WorkbenchIndicator extends PanelMenu.Button {
-    _init(workbenches, onLaunch, onReload) {
+    _init(workbenches, onLaunch, onRaise, onReload) {
         super._init(0.0, 'Workbench Launcher');
 
         this.add_child(new St.Icon({
@@ -70,6 +87,18 @@ class WorkbenchIndicator extends PanelMenu.Button {
             const item = new PopupMenu.PopupMenuItem(workbench.name);
             item.connect('activate', () => onLaunch(workbench));
             this.menu.addMenuItem(item);
+        }
+
+        if (workbenches.length > 0) {
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            const raiseTitle = new PopupMenu.PopupMenuItem('前面に出す', {reactive: false});
+            this.menu.addMenuItem(raiseTitle);
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            for (const workbench of workbenches) {
+                const item = new PopupMenu.PopupMenuItem(workbench.name);
+                item.connect('activate', () => onRaise(workbench));
+                this.menu.addMenuItem(item);
+            }
         }
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -121,6 +150,18 @@ export default class WorkbenchLauncherExtension extends Extension {
     }
 
     launchWorkbenchById(id) {
+        this._launchWorkbench(this._workbenchById(id));
+    }
+
+    raiseWorkbenchById(id, only) {
+        return this._raiseWorkbench(this._workbenchById(id), only);
+    }
+
+    cycleWorkbench(only) {
+        return this._cycleWorkbench(only);
+    }
+
+    _workbenchById(id) {
         const workbench = this._workbenches.find(entry => entry.id === id);
         if (!workbench) {
             const known = this.workbenchIds.join(', ') || '(なし)';
@@ -128,7 +169,7 @@ export default class WorkbenchLauncherExtension extends Extension {
             Main.notifyError('Workbench Launcher', message);
             throw new Error(message);
         }
-        this._launchWorkbench(workbench);
+        return workbench;
     }
 
     _exportDBus() {
@@ -160,6 +201,7 @@ export default class WorkbenchLauncherExtension extends Extension {
             this._indicator = new WorkbenchIndicator(
                 workbenches,
                 workbench => this._launchWorkbench(workbench),
+                workbench => this._raiseWorkbench(workbench, false),
                 () => this._reload()
             );
             Main.panel.addToStatusArea(this.uuid, this._indicator);
@@ -292,13 +334,97 @@ export default class WorkbenchLauncherExtension extends Extension {
     }
 
     _findExistingWindow(rule) {
+        return this._findExistingWindows(rule.match)[0] ?? null;
+    }
+
+    _findExistingWindows(match) {
+        const found = [];
         for (const actor of global.get_window_actors()) {
             const window = actor.meta_window;
             if (window.get_window_type() === Meta.WindowType.NORMAL &&
-                this._windowMatches(window, rule.match))
-                return window;
+                this._windowMatches(window, match))
+                found.push(window);
         }
-        return null;
+        return found;
+    }
+
+    // ワークベンチに属するウィンドウ（match に一致する通常ウィンドウ）を配置先ワークスペース
+    // ごとにまとめて返す。ウィンドウが最も多いワークスペースを先頭にする。
+    _workbenchWindowGroups(workbench) {
+        const groups = new Map();
+        const seen = new Set();
+        for (const app of workbench.apps) {
+            for (const window of this._findExistingWindows(app.match)) {
+                if (seen.has(window))
+                    continue;
+                seen.add(window);
+                const workspace = window.get_workspace();
+                if (!groups.has(workspace))
+                    groups.set(workspace, []);
+                groups.get(workspace).push(window);
+            }
+        }
+        return [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+    }
+
+    // ワークベンチのウィンドウを前面に出す。起動していなければ起動する。
+    // only が真なら、同じワークスペースにある他の通常ウィンドウを最小化する。
+    // 戻り値は前面に出せたかどうか（起動に回した場合は false）。
+    _raiseWorkbench(workbench, only) {
+        const groups = this._workbenchWindowGroups(workbench);
+        if (groups.length === 0) {
+            Main.notify('Workbench Launcher', `${workbench.name} は起動していないため起動します`);
+            this._launchWorkbench(workbench);
+            return false;
+        }
+
+        const [workspace, windows] = groups[0];
+        const time = global.get_current_time();
+        const members = new Set(windows);
+
+        if (workspace && workspace !== global.workspace_manager.get_active_workspace())
+            workspace.activate(time);
+
+        if (only) {
+            for (const actor of global.get_window_actors()) {
+                const window = actor.meta_window;
+                if (members.has(window) || window.get_window_type() !== Meta.WindowType.NORMAL)
+                    continue;
+                if (window.get_workspace() !== workspace && !window.is_on_all_workspaces())
+                    continue;
+                window.minimize();
+            }
+        }
+
+        // 設定で先頭のアプリが最後にフォーカスを得るよう、逆順に前面へ出す。
+        for (const window of [...windows].reverse()) {
+            if (window.minimized)
+                window.unminimize();
+            window.activate(time);
+        }
+        return true;
+    }
+
+    // フォーカス中のウィンドウが属するワークベンチの「次」を前面に出す。
+    // 対象は現在ウィンドウを持つワークベンチだけで、設定ファイルの並び順で巡回する。
+    _cycleWorkbench(only) {
+        const running = this._workbenches.filter(
+            workbench => this._workbenchWindowGroups(workbench).length > 0
+        );
+        if (running.length === 0) {
+            const message = '起動中のワークベンチがありません';
+            Main.notify('Workbench Launcher', message);
+            throw new Error(message);
+        }
+
+        const focus = global.display.focus_window;
+        const currentIndex = focus
+            ? running.findIndex(workbench =>
+                workbench.apps.some(app => this._windowMatches(focus, app.match)))
+            : -1;
+        const next = running[(currentIndex + 1) % running.length];
+        this._raiseWorkbench(next, only);
+        return next.id;
     }
 
     _windowMatches(window, match) {

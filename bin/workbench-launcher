@@ -2,11 +2,15 @@
 # Workbench Launcher 拡張機能をコマンドラインから操作する。
 #
 #   workbench-launcher launch <workbench-id> [--wait SECONDS]
+#   workbench-launcher raise <workbench-id> [--only]
+#   workbench-launcher cycle [--only]
 #   workbench-launcher list
 #   workbench-launcher reload
 #
 # 拡張機能が公開する D-Bus インターフェースを呼び出す。--wait を付けると、
 # ログイン直後などで拡張機能がまだ有効になっていない場合に、指定秒数まで再試行する。
+# raise はワークベンチのウィンドウを前面に出す（起動していなければ起動する）。
+# cycle は起動中のワークベンチを設定の並び順で切り替える。--only は他のウィンドウを最小化する。
 set -euo pipefail
 
 dest='org.gnome.Shell'
@@ -14,7 +18,7 @@ object_path='/org/gnome/Shell/Extensions/WorkbenchLauncher'
 interface='org.gnome.Shell.Extensions.WorkbenchLauncher'
 
 usage() {
-    sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -32,6 +36,17 @@ case "$1" in
         ;;
     reload)
         call Reload >/dev/null
+        ;;
+    raise)
+        [[ $# -ge 2 ]] || usage 1
+        only=false
+        [[ "${3:-}" == "--only" ]] && only=true
+        call RaiseWorkbench "'$2'" "$only" >/dev/null
+        ;;
+    cycle)
+        only=false
+        [[ "${2:-}" == "--only" ]] && only=true
+        call CycleWorkbench "$only" | sed -e "s/^('//" -e "s/',)$//"
         ;;
     launch)
         [[ $# -ge 2 ]] || usage 1
