@@ -30,6 +30,7 @@ interface AppRule {
     rect?: RelativeRect;
     maximized?: boolean;
     workspaceIndex?: number;
+    workspace?: Meta.Workspace;
 }
 
 interface Workbench {

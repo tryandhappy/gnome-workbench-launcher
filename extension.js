@@ -13,6 +13,9 @@ const CONFIG_DIRECTORY = 'workbench-launcher';
 const CONFIG_FILE = 'workbenches.json';
 const MATCH_RETRY_DELAYS_MS = [150, 400, 900, 1600, 3000, 5000];
 const REAPPLY_DELAYS_MS = [350, 1000];
+// 動的ワークスペースでは空のワークスペースがすぐ削除されるため、起動したアプリの
+// ウィンドウが届くまで作成先のワークスペースを生かしておく時間。
+const WORKSPACE_KEEP_ALIVE_MS = 15000;
 
 const DBUS_INTERFACE_NAME = 'org.gnome.Shell.Extensions.WorkbenchLauncher';
 const DBUS_OBJECT_PATH = '/org/gnome/Shell/Extensions/WorkbenchLauncher';
@@ -229,10 +232,12 @@ export default class WorkbenchLauncherExtension extends Extension {
 
     _launchWorkbench(workbench) {
         const workspaceIndex = workbench.workspace - 1;
-        this._ensureWorkspace(workspaceIndex);
+        // インデックスではなくワークスペースそのものを保持する。動的ワークスペースで
+        // 途中の空ワークスペースが削除されて番号がずれても、同じワークスペースを指し続ける。
+        const workspace = this._ensureWorkspace(workspaceIndex);
 
         for (const app of workbench.apps) {
-            const rule = {...app, workspaceIndex};
+            const rule = {...app, workspaceIndex, workspace};
             const existing = app.reuseExisting ? this._findExistingWindow(rule) : null;
 
             if (existing) {
@@ -254,8 +259,10 @@ export default class WorkbenchLauncherExtension extends Extension {
         }
 
         this._addTimeout(1300, () => {
-            const workspace = global.workspace_manager.get_workspace_by_index(workspaceIndex);
-            workspace?.activate(global.get_current_time());
+            const target = this._workspaceExists(workspace)
+                ? workspace
+                : global.workspace_manager.get_workspace_by_index(workspaceIndex);
+            target?.activate(global.get_current_time());
         });
     }
 
@@ -317,13 +324,18 @@ export default class WorkbenchLauncherExtension extends Extension {
             if (!window)
                 return;
 
-            this._ensureWorkspace(rule.workspaceIndex);
-            const workspace = global.workspace_manager.get_workspace_by_index(rule.workspaceIndex);
+            if (!this._workspaceExists(rule.workspace))
+                rule.workspace = this._ensureWorkspace(rule.workspaceIndex);
+            const workspace = rule.workspace;
             const monitorCount = global.display.get_n_monitors();
             const monitor = Math.min(Math.max(rule.monitor ?? 0, 0), monitorCount - 1);
 
-            window.move_to_monitor(monitor);
-            window.change_workspace(workspace);
+            // move_to_monitor は同じモニターでもウィンドウを作業領域の左上へ動かすため、
+            // 別のモニターにあるときだけ呼ぶ。
+            if (window.get_monitor() !== monitor)
+                window.move_to_monitor(monitor);
+            if (window.get_workspace() !== workspace)
+                window.change_workspace(workspace);
 
             if (rule.rect)
                 this._applyRect(window, workspace, monitor, rule.rect);
@@ -362,8 +374,24 @@ export default class WorkbenchLauncherExtension extends Extension {
 
     _ensureWorkspace(index) {
         const manager = global.workspace_manager;
-        while (manager.get_n_workspaces() <= index)
-            manager.append_new_workspace(false, global.get_current_time());
+        while (manager.get_n_workspaces() <= index) {
+            const created = manager.append_new_workspace(false, global.get_current_time());
+            Main.wm.keepWorkspaceAlive(created, WORKSPACE_KEEP_ALIVE_MS);
+        }
+        const workspace = manager.get_workspace_by_index(index);
+        Main.wm.keepWorkspaceAlive(workspace, WORKSPACE_KEEP_ALIVE_MS);
+        return workspace;
+    }
+
+    _workspaceExists(workspace) {
+        if (!workspace)
+            return false;
+        const manager = global.workspace_manager;
+        for (let i = 0; i < manager.get_n_workspaces(); i++) {
+            if (manager.get_workspace_by_index(i) === workspace)
+                return true;
+        }
+        return false;
     }
 
     _addTimeout(delayMs, callback) {
