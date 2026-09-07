@@ -11,8 +11,8 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 interface RelativeRect {
     x: number;
     y: number;
-    width: number;
-    height: number;
+    width?: number;
+    height?: number;
 }
 
 interface WindowMatch {

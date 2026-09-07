@@ -201,14 +201,23 @@ export default class WorkbenchLauncherExtension extends Extension {
             if (!app.match || !app.rect)
                 throw new Error(`${workbench.name}/${app.id}: match と rect が必要です`);
 
-            for (const key of ['x', 'y', 'width', 'height']) {
+            // x, y は必須。width, height は省略可能で、省略時はサイズを変更せず位置だけ動かす。
+            for (const key of ['x', 'y']) {
                 if (typeof app.rect[key] !== 'number')
+                    throw new Error(`${workbench.name}/${app.id}: rect.${key} が不正です`);
+            }
+            for (const key of ['width', 'height']) {
+                if (app.rect[key] !== undefined && typeof app.rect[key] !== 'number')
                     throw new Error(`${workbench.name}/${app.id}: rect.${key} が不正です`);
             }
 
             const {x, y, width, height} = app.rect;
-            if (x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > 1.001 || y + height > 1.001)
+            if (x < 0 || y < 0 || x > 1.001 || y > 1.001)
                 throw new Error(`${workbench.name}/${app.id}: rect は0～1の範囲で指定してください`);
+            if (width !== undefined && (width <= 0 || x + width > 1.001))
+                throw new Error(`${workbench.name}/${app.id}: rect.width は0より大きく、x + width が1以下になるようにしてください`);
+            if (height !== undefined && (height <= 0 || y + height > 1.001))
+                throw new Error(`${workbench.name}/${app.id}: rect.height は0より大きく、y + height が1以下になるようにしてください`);
         }
     }
 
@@ -314,9 +323,20 @@ export default class WorkbenchLauncherExtension extends Extension {
             const area = workspace.get_work_area_for_monitor(monitor);
             const x = area.x + Math.round(area.width * rule.rect.x);
             const y = area.y + Math.round(area.height * rule.rect.y);
-            const width = Math.max(100, Math.round(area.width * rule.rect.width));
-            const height = Math.max(100, Math.round(area.height * rule.rect.height));
-            window.move_resize_frame(false, x, y, width, height);
+
+            // width / height が両方省略されていれば位置だけ移動し、サイズはアプリ任せにする。
+            if (rule.rect.width === undefined && rule.rect.height === undefined) {
+                window.move_frame(false, x, y);
+            } else {
+                const frame = window.get_frame_rect();
+                const width = rule.rect.width === undefined
+                    ? frame.width
+                    : Math.max(100, Math.round(area.width * rule.rect.width));
+                const height = rule.rect.height === undefined
+                    ? frame.height
+                    : Math.max(100, Math.round(area.height * rule.rect.height));
+                window.move_resize_frame(false, x, y, width, height);
+            }
 
             if (rule.maximized)
                 window.maximize();
