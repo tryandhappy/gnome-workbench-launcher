@@ -27,7 +27,7 @@ interface AppRule {
     match: WindowMatch;
     reuseExisting?: boolean;
     monitor?: number;
-    rect: RelativeRect;
+    rect?: RelativeRect;
     maximized?: boolean;
     workspaceIndex?: number;
 }

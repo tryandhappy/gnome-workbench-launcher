@@ -198,8 +198,14 @@ export default class WorkbenchLauncherExtension extends Extension {
         for (const app of workbench.apps) {
             if (!app.id || !Array.isArray(app.command) || app.command.length === 0)
                 throw new Error(`${workbench.name}: 各アプリには id と command が必要です`);
-            if (!app.match || !app.rect)
-                throw new Error(`${workbench.name}/${app.id}: match と rect が必要です`);
+            if (!app.match)
+                throw new Error(`${workbench.name}/${app.id}: match が必要です`);
+
+            // rect は省略可能。省略時はワークスペースとモニターへ移動するだけで、位置とサイズはアプリ任せにする。
+            if (app.rect === undefined)
+                continue;
+            if (typeof app.rect !== 'object' || app.rect === null)
+                throw new Error(`${workbench.name}/${app.id}: rect が不正です`);
 
             // x, y は必須。width, height は省略可能で、省略時はサイズを変更せず位置だけ動かす。
             for (const key of ['x', 'y']) {
@@ -316,27 +322,11 @@ export default class WorkbenchLauncherExtension extends Extension {
             const monitorCount = global.display.get_n_monitors();
             const monitor = Math.min(Math.max(rule.monitor ?? 0, 0), monitorCount - 1);
 
-            window.unmaximize();
             window.move_to_monitor(monitor);
             window.change_workspace(workspace);
 
-            const area = workspace.get_work_area_for_monitor(monitor);
-            const x = area.x + Math.round(area.width * rule.rect.x);
-            const y = area.y + Math.round(area.height * rule.rect.y);
-
-            // width / height が両方省略されていれば位置だけ移動し、サイズはアプリ任せにする。
-            if (rule.rect.width === undefined && rule.rect.height === undefined) {
-                window.move_frame(false, x, y);
-            } else {
-                const frame = window.get_frame_rect();
-                const width = rule.rect.width === undefined
-                    ? frame.width
-                    : Math.max(100, Math.round(area.width * rule.rect.width));
-                const height = rule.rect.height === undefined
-                    ? frame.height
-                    : Math.max(100, Math.round(area.height * rule.rect.height));
-                window.move_resize_frame(false, x, y, width, height);
-            }
+            if (rule.rect)
+                this._applyRect(window, workspace, monitor, rule.rect);
 
             if (rule.maximized)
                 window.maximize();
@@ -345,6 +335,29 @@ export default class WorkbenchLauncherExtension extends Extension {
         apply();
         for (const delay of REAPPLY_DELAYS_MS)
             this._addTimeout(delay, apply);
+    }
+
+    _applyRect(window, workspace, monitor, rect) {
+        window.unmaximize();
+
+        const area = workspace.get_work_area_for_monitor(monitor);
+        const x = area.x + Math.round(area.width * rect.x);
+        const y = area.y + Math.round(area.height * rect.y);
+
+        // width / height が両方省略されていれば位置だけ移動し、サイズはアプリ任せにする。
+        if (rect.width === undefined && rect.height === undefined) {
+            window.move_frame(false, x, y);
+            return;
+        }
+
+        const frame = window.get_frame_rect();
+        const width = rect.width === undefined
+            ? frame.width
+            : Math.max(100, Math.round(area.width * rect.width));
+        const height = rect.height === undefined
+            ? frame.height
+            : Math.max(100, Math.round(area.height * rect.height));
+        window.move_resize_frame(false, x, y, width, height);
     }
 
     _ensureWorkspace(index) {
